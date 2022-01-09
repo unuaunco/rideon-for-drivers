@@ -1,0 +1,34 @@
+stages:
+  - DEVDEPLOY-DEPLOY
+  - PRODUCTION-DEPLOY 
+  - FEATUREDEPLOY-DEPLOY
+
+dev-deployment:
+  stage: DEVDEPLOY-DEPLOY
+  tags:
+       - devwebserver
+  only:
+    refs:
+       - development
+  script:
+       - cd /root/new-env/laravel-app-2.2; git pull; rm .env; cp .env.development .env; sudo chown -R www-data:www-data /root/new-env/laravel-app-2.2; sudo find /root/new-env/laravel-app-2.2 -type f -exec chmod 664 {} \;; sudo find /root/new-env/laravel-app-2.2 -type d -exec chmod 775 {} \;
+
+prod-deployment:
+  stage: PRODUCTION-DEPLOY
+  tags:
+       - rideonprodserver
+  only:
+    refs:
+       - master
+  script:
+       - cd /opt/rideonapp; git pull; docker exec --user root rideonprod01 chown -R www-data:www-data /var/www/html; docker exec --user root rideonprod01 find /var/www/html -type f -exec chmod 664 {} \;; docker exec --user root rideonprod01 find /var/www/html -type d -exec chmod 775 {} \;
+
+autonomusprod-deployment:
+  stage: PRODUCTION-DEPLOY
+  tags:
+       - autonomusprodserver
+  only:
+    refs:
+       - master
+  script:
+       - cd /opt/rideonapp; git pull; docker exec --user root autonomusprod01 chown -R www-data:www-data /var/www/html; docker exec --user root autonomusprod01 find /var/www/html -type f -exec chmod 664 {} \;; docker exec --user root autonomusprod01 find /var/www/html -type d -exec chmod 775 {} \;; npm install; npm run dev; 

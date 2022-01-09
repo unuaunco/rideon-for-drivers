@@ -1,0 +1,4 @@
+host {{ gitlab_server_url | regex_replace('^https://(.*?)/$', '\\1') }}
+ HostName {{ gitlab_server_url | regex_replace('^https://(.*?)/$', '\\1') }}
+ IdentityFile ~/.ssh/repo_key
+ User deploy_user

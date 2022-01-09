@@ -1,0 +1,11 @@
+---
+# This playbook deploys the Container Manager with all nessessary services.
+
+- name: Aplly ansible configuration to the host(s)
+  hosts: all
+  remote_user: root
+  become: true
+  become_user: root
+
+  roles:
+     - { role: laravel_prod_app }

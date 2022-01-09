@@ -1,0 +1,78 @@
+---
+- name: Install system prerequisites
+  apt:
+    name:  "{{ item }}"
+    state: latest
+    purge: yes
+    update_cache: yes
+  loop:
+    - libssl-dev
+    - libpcre3-dev
+    - zlib1g-dev
+    - apt-transport-https
+    - ca-certificates
+    - software-properties-common
+    - curl
+    - python3-pip
+    - gnupg-agent
+
+- name: Add docker repository key
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+
+- name: Verify that we have the key with the fingerprint
+  apt_key:
+    id: 0EBFCD88
+    state: present
+  
+- name: Add docker repository
+  apt_repository:
+    repo: "deb [arch=amd64] https://download.docker.com/linux/{{ ansible_facts['distribution'] | lower }} {{ ansible_facts['lsb']['codename'] }} stable"
+    state: present
+
+- name: Install git and docker packages
+  apt:
+    name:  "{{ item }}"
+    state: latest
+    purge: yes
+    update_cache: yes
+  loop:
+    - git
+    - docker-ce
+    - docker-ce-cli
+    - containerd.io
+
+- name: Install python packages for using with ansible
+  pip:
+    name: "{{ item }}"
+    executable: pip3
+  loop:
+    - 'docker'
+    - 'python-gitlab'
+    - 'docker-compose'
+
+- name: Install docker-compose
+  get_url: 
+    url : "https://github.com/docker/compose/releases/download/1.25.4/docker-compose-{{ ansible_facts['system'] }}-{{ ansible_facts['architecture']}}"
+    dest: /usr/local/bin/docker-compose
+    mode: 'u+x,g+x'
+
+- name: Download nodejs 15 repo installation script
+  get_url:
+    url: "https://deb.nodesource.com/setup_15.x"
+    dest: /tmp/setup_15.sh
+    mode: 'u+x,g+x'
+
+- name: Install nodejs 15 repo
+  script:
+    cmd: /tmp/setup_15.sh
+
+- name: Install nodejs package
+  apt:
+    name:  "{{ item }}"
+    state: latest
+    purge: yes
+    update_cache: yes
+  loop:
+    - nodejs

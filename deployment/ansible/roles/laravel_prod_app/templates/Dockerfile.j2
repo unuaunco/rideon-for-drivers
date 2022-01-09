@@ -1,0 +1,74 @@
+FROM php:7.4.13-fpm
+
+COPY composer.lock composer.json /var/www/html/
+
+WORKDIR /var/www/html
+
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpng-dev \
+    libjpeg62-turbo-dev \
+    libfreetype6-dev \
+    libmcrypt-dev \
+    libonig-dev \
+    locales \
+    zip \
+    jpegoptim optipng pngquant gifsicle \
+    vim \
+    unzip \
+    git \
+    curl \
+    libzip4 \
+    libzip-dev \
+    libicu-dev \
+    libbz2-dev \
+    libreadline-dev \
+    g++ \
+    cron
+
+# Clear cache
+RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Install extensions
+RUN docker-php-ext-install \
+    bz2 \
+    intl \
+    iconv \
+    bcmath \
+    opcache \
+    calendar \
+    pdo_mysql \
+    zip \
+    exif \
+    pcntl \
+    gd \
+    tokenizer
+
+    
+# Install composer
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer --version=1.10.17
+
+# # Add user for laravel
+# RUN groupadd -g 1000 www
+# RUN useradd -u 1000 -ms /bin/bash -g www www
+
+# Copy application folder
+COPY . /var/www/html
+
+# Copy existing permissions from folder to docker
+COPY --chown=www-data:www-data . /var/www/html
+RUN chown -R www-data:www-data /var/www/html
+
+RUN composer install
+
+RUN php artisan migrate:refresh --seed
+
+# /etc/init.d/cron start
+#* * * * * cd /var/www/html && /usr/local/bin/php artisan schedule:run >> /tmp/scheduller.log 2>&1
+
+# change current user to www
+USER www-data
+
+EXPOSE 9000
+CMD ["php-fpm"]

@@ -1,0 +1,19 @@
+---
+# - debug:
+#     msg:
+#       - "{{ ansible_facts}}"
+
+- name: Install general system prerequisites
+  import_tasks: install_general_prerequisites.yml
+
+- name: Deploy docker invironment
+  import_tasks: prepare_docker_containers.yml
+
+- name: Run runner
+  import_tasks: gitlab_runner_installation.yml
+
+- debug:
+    msg:
+      - "Setup finished"
+      - "Docker containers: app, db, phpmyadmin, mysql."
+      - "Laravel is available on https://{{ dns_name }}"

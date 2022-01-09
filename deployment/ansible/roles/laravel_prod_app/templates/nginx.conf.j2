@@ -1,0 +1,98 @@
+user nginx;
+worker_processes auto;
+pid /run/nginx.pid;
+include /etc/nginx/modules-enabled/*.conf;
+
+events {
+	worker_connections 768;
+	multi_accept on;
+	use epoll;
+}
+
+http {
+
+	##
+	# Basic Settings
+	##
+
+	keepalive_timeout 65;
+	types_hash_max_size 2048;
+	# server_tokens off;
+
+	# server_names_hash_bucket_size 64;
+	# server_name_in_redirect off;
+
+	include /etc/nginx/mime.types;
+	default_type application/octet-stream;
+
+	##
+	# SSL Settings
+	##
+
+	ssl_protocols TLSv1 TLSv1.1 TLSv1.2; # Dropping SSLv3, ref: POODLE
+	ssl_prefer_server_ciphers on;
+
+	##
+	# Logging Settings
+	##
+
+	access_log /var/log/nginx/access.log;
+	error_log /var/log/nginx/error.log;
+
+	port_in_redirect off;
+
+	keepalive_requests 100;
+
+	# Lower buffers to a resonable level
+    # This allows to save memory at big number of requests
+    client_body_buffer_size 10K;
+    client_header_buffer_size 2k;    # for WordPress, 2k may not be enough
+    client_max_body_size 50m;
+    large_client_header_buffers 2 4k;
+    
+	# Lower timeouts
+    client_body_timeout 100;
+    client_header_timeout 100;
+    send_timeout 600;
+    proxy_connect_timeout       600;
+    proxy_send_timeout          600;
+    proxy_read_timeout          600;
+    
+	# Enable reset connections on timeout
+    reset_timedout_connection on;
+    
+	# Speed up tcp
+    tcp_nodelay on;
+    tcp_nopush on;
+
+    # Allow usage of system Linux function senfile() to speed up file transfers
+    sendfile on;
+
+    # Turn on zipping of data
+    gzip on;
+    gzip_http_version 1.0;
+    gzip_proxied any;
+    gzip_min_length 1100;
+    gzip_types text/plain text/css application/json application/x-javascript text/xml application/xml application/xml+rss text/javascript application/javascript image/svg+xml;
+    gzip_disable msie6;
+    gzip_vary on;
+    
+    # Turn on caching of open files
+    open_file_cache max=10000 inactive=20s;
+    open_file_cache_valid 30s;
+    open_file_cache_min_uses 2;
+    open_file_cache_errors on;
+
+
+    # Set php timeout
+    fastcgi_read_timeout 300;
+
+    fastcgi_cache_path /var/cache/nginx/fcgi levels=1:2 keys_zone=microcache:10m max_size=1024m inactive=1h;
+
+	##
+	# Virtual Host Configs
+	##
+
+	include /etc/nginx/conf.d/*.conf;
+	include /etc/nginx/sites-enabled/*;
+}

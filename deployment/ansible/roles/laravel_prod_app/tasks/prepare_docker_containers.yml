@@ -1,0 +1,164 @@
+---
+- name: Copy ssh key for clonning repo
+  template:
+    src: "{{ item.src }}.j2"
+    dest: "{{ item.dest }}/{{ item.src }}"
+    mode: 0600
+    owner: root
+    group: root
+  with_items:
+    - { src: 'repo_key', dest: '~/.ssh/' }
+
+- name: Copy ssh config for gitlab
+  template:
+    src: "ssh_config.j2"
+    dest: "~/.ssh/config"
+    mode: 0600
+    owner: root
+    group: root
+
+- name: Clone laravel git repo
+  git:
+    repo: "git@{{ gitlab_server_url | regex_replace('^https://(.*?)/$', '\\1') }}:backend-frontend/laravel-app.git"
+    version: master
+    dest: /opt/rideonapp
+    key_file: ~/.ssh/repo_key
+    accept_hostkey: yes
+    force: yes
+
+# - name: Clone chat git repo
+#   git:
+#     repo: git@gitlab.srv.rideon.co:rideonwebapps/send-bird-web-chat.git
+#     version: master
+#     dest: /opt/rideonapp/send-bird-web-chat
+#     key_file: ~/.ssh/repo_key
+#     accept_hostkey: yes
+#     force: yes
+
+- name: Install packages based on package.json.
+  npm:
+    path: /opt/rideonapp
+
+- name: Create docker-compose.yml
+  template:
+    src: "{{ item.src }}.j2"
+    dest: "{{ item.dest }}/{{ item.src }}"
+    mode: 0644
+    owner: root
+    group: root
+  with_items:
+    - { src: 'docker-compose.yml', dest: '/opt/rideonapp' }
+
+- name: Create dockerfile
+  template:
+    src: "{{ item.src }}.j2"
+    dest: "{{ item.dest }}/{{ item.src }}"
+    mode: 0644
+    owner: root
+    group: root
+  with_items:
+    - { src: 'Dockerfile', dest: '/opt/rideonapp' }
+
+- name: Create env file for laravel
+  template:
+    src: "{{ item.src }}.j2"
+    dest: "{{ item.dest }}/.env"
+    mode: 0644
+    owner: root
+    group: root
+  with_items:
+    - { src: '.env.production', dest: '/opt/rideonapp/' }
+
+- name: Create cloudflare ini
+  template:
+    src: "{{ item.src }}.j2"
+    dest: "{{ item.dest }}/{{ item.src }}"
+    mode: 0644
+    owner: root
+    group: root
+  with_items:
+    - { src: 'cloudflare.ini', dest: /tmp/}
+
+- name: Check if fullchain cert exist
+  stat:
+    path: /etc/letsencrypt/live/{{dns_name}}/fullchain.pem
+  register: stat_fullchain
+
+- name: Check if privkey exist
+  stat:
+    path: /etc/letsencrypt/live/{{dns_name}}/privkey.pem
+  register: stat_privkey
+
+- name: RM current key folders if keys not exist
+  file:
+    state: absent
+    path: "{{ item }}"
+  loop:
+    - "/etc/letsencrypt/archive/{{dns_name}}/"
+    - "/etc/letsencrypt/live/{{dns_name}}/"
+  when: stat_fullchain.stat.exists == False or stat_privkey.stat.exists == False
+
+- name: Generate ssl certs
+  docker_container:
+    name: certbot-dns-cloudflare
+    image: certbot/dns-cloudflare:latest
+    auto_remove: yes
+    state: started
+    interactive: yes
+    tty: yes
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt
+      - /tmp/cloudflare.ini:/cloudflare.ini
+    command :
+        - "certonly"
+        - "--dns-cloudflare"
+        - "--dns-cloudflare-credentials /cloudflare.ini"
+        - "-d {{dns_name}}"
+        - "--email {{dns_cloudflare_email}}"
+        - "--non-interactive "
+        - "--agree-tos"
+        - "--server https://acme-v02.api.letsencrypt.org/directory"
+        - "--force-renew"
+  when: stat_fullchain.stat.exists == False or stat_privkey.stat.exists == False
+
+- name: Create configs directories if not exist
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  with_items:
+        - /etc/nginx/conf.d/
+
+- name: Copy nginx config
+  template:
+    src: nginx.conf.j2
+    dest: "/etc/nginx/nginx.conf"
+    mode: 0644
+    owner: root
+    group: root
+
+- name: Copy nginx host config
+  template:
+    src: host_nginx.conf.j2
+    dest: "/etc/nginx/conf.d/{{dns_name}}.conf"
+    mode: 0644
+    owner: root
+    group: root
+
+- name: Ensure that docker-composer env not exists
+  docker_compose:
+    project_src: /opt/rideonapp
+    state: absent
+
+- name: Deploy all stack using docker-composer
+  docker_compose:
+    project_src: /opt/rideonapp
+  register: output
+
+- debug:
+    var: output
+  
+  
+  
+    #  /etc/letsencrypt/live/{{dns_name}}/fullchain.pem - Your certificate and chain
+    #  /etc/letsencrypt/live/{{dns_name}}/privkey.pem - Your key file
