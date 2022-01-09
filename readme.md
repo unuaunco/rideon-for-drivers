@@ -1,6 +1,7 @@
 # Delivery app
 
-Based on Laravel 5.8 and RideOn 2.2 code base
+Based on Laravel 5.8 and RideOn 2.2 code base.
+Published by the permission of RideOn Australia owners.
 
 ## Developing dependencies
 
@@ -11,7 +12,9 @@ Based on Laravel 5.8 and RideOn 2.2 code base
 
 ## Installation
 
-Configure MySQL instance and export `database.zip` dump to the database.
+Please send the requirement email to pardusurbanus@protonmail.com or rodo@rideon.group to get installation artifacts.
+
+Configure MySQL instance and export `database.zip` (need to send) dump to the database.
 
 Configure `.env` file same way as in `.env.development` file.
 
